@@ -168,11 +168,14 @@ if __name__ == "__main__":
     # optim_fn = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     # SECOND CONV NET-SPECIFIC FROM TUTORIAL:
-    model = torchvision.models.resnet18(pretrained=True)
-    for param in model.parameters():
-        param.requires_grad = False
-    optim_fn = optim.SGD(model.fc.parameters(), lr=0.001, momentum=0.9)
+    # model = torchvision.models.resnet18(pretrained=True)
+    # for param in model.parameters():
+    #     param.requires_grad = False
 
+    # Other pre-trained net for problem 2:
+    model = torch.hub.load('pytorch/vision:v0.6.0', 'googlenet', pretrained=True)
+
+    optim_fn = optim.SGD(model.fc.parameters(), lr=0.001, momentum=0.9)
     feature_size = model.fc.in_features
     model.fc = nn.Linear(feature_size, 2)
     model = model.to(device)
