@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import numpy as np
+import torchvision
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
 import time
@@ -19,7 +20,6 @@ import copy
 plt.ion()   # interactive mode
 
 data_dir = 'data/hymenoptera_data'
-print(torch.cuda.is_available())
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Data augmentation and normalization for training
@@ -162,12 +162,20 @@ if __name__ == "__main__":
     # out = torchvision.utils.make_grid(inputs)
     # imshow(out, title=[class_names[x] for x in classes])
 
-    model = models.resnet18(pretrained=True)
+    # FIRST CONV NET-SPECIFIC FROM TUTORIAL:
+
+    # model = models.resnet18(pretrained=True)
+    # optim_fn = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+    # SECOND CONV NET-SPECIFIC FROM TUTORIAL:
+    model = torchvision.models.resnet18(pretrained=True)
+    for param in model.parameters():
+        param.requires_grad = False
+    optim_fn = optim.SGD(model.fc.parameters(), lr=0.001, momentum=0.9)
+
     feature_size = model.fc.in_features
     model.fc = nn.Linear(feature_size, 2)
-
     model = model.to(device)
-    optim_fn = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     train_model(
         model,
