@@ -1,14 +1,15 @@
 import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.datasets import load_digits
 from time import time
 
+from sklearn.cluster import KMeans
+from sklearn.datasets import load_digits
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 if __name__ == "__main__":
 
-    data, labels = load_digits(return_X_y=True)
+    digits = load_digits(return_X_y=True)
+    data, labels = digits
 
     n_samples, n_features = data.shape
     n_digits = np.unique(labels).size
@@ -21,5 +22,9 @@ if __name__ == "__main__":
     estimator = make_pipeline(StandardScaler(), k_means).fit(data)
     time_to_fit = time() - start_time
 
-    results = ["k-means++", time_to_fit*1000, estimator[-1].inertia_]  # multiply by 1k to get ms instead of seconds
-    print(results)
+    # results = ["k-means++", time_to_fit*1000, estimator[-1].inertia_]  # multiply by 1k to get ms instead of seconds
+    # print(results)
+
+    idxs = labels.argsort()
+    sorted_data, sorted_labels = data[idxs], labels[idxs]
+
