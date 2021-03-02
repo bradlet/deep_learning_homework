@@ -28,9 +28,15 @@ if __name__ == "__main__":
     # idxs == 'indices'
     idxs = labels.argsort()
     sorted_data, sorted_labels = data[idxs], labels[idxs]
+    print("Pre-Processing: ", sorted_data.shape)
 
     processed_data = np.empty((64,))
-    for i in range(0, 9):
+    for i in range(0, 10):
         single_class_idxs = np.nonzero(sorted_labels == i)
-        processed_data = np.append(processed_data, sorted_data)
+        single_class = sorted_data[single_class_idxs]
+        print(single_class.shape)
+        processed_data = np.vstack((processed_data, single_class[:100]))
+
+    processed_data = np.delete(processed_data, 0, axis=0)  # Have to remove uninitialized first row from np.empty
+    print("Processed: ", processed_data.shape)
 
