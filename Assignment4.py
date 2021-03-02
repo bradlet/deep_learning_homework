@@ -25,6 +25,12 @@ if __name__ == "__main__":
     # results = ["k-means++", time_to_fit*1000, estimator[-1].inertia_]  # multiply by 1k to get ms instead of seconds
     # print(results)
 
+    # idxs == 'indices'
     idxs = labels.argsort()
     sorted_data, sorted_labels = data[idxs], labels[idxs]
+
+    processed_data = np.empty((64,))
+    for i in range(0, 9):
+        single_class_idxs = np.nonzero(sorted_labels == i)
+        processed_data = np.append(processed_data, sorted_data)
 
