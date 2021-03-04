@@ -1,6 +1,13 @@
 import torch
 import torch.nn as nn
+import numpy as np
+from time import time
 from torchvision import datasets, transforms
+from sklearn.cluster import KMeans
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+from Assignment4Part1 import row_accuracy
 
 # Using code for auto encoder from https://www.cs.toronto.edu/~lczhang/360/lec/w05/autoencoder.html
 
@@ -63,5 +70,18 @@ if __name__ == "__main__":
     max_epochs = 5
     outputs = train(model, num_epochs=max_epochs)
 
-    embedding = model.encoder(outputs[max_epochs-1][1])
-    print(embedding.shape)
+    embedding = model.encoder(outputs[max_epochs-1][1]).detach().numpy().squeeze()
+
+    k_means = KMeans(init="k-means++", n_clusters=10, n_init=4, random_state=0)
+
+    start_time = time()
+    estimator = make_pipeline(StandardScaler(), k_means).fit(embedding)
+    time_to_fit = time() - start_time
+    print("Time to fit (ms): ", time_to_fit*1000)
+
+    predictions = estimator[-1].labels_
+    accuracy_table = row_accuracy(predictions[:100])
+    for i in range(1, 10):
+        accuracy_table = np.vstack((accuracy_table, row_accuracy(predictions[i*100:(i+1)*100])))
+
+    print(accuracy_table)
