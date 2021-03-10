@@ -34,6 +34,10 @@ ndf = 64  # Size of feature maps in discriminator
 beta1 = 0.5  # Beta1 hyper parameter for Adam optimizers
 ngpu = 1  # Num GPUs available -- I have 1.
 
+# Establish convention for real and fake labels during training
+real_label = 1.
+fake_label = 0.
+
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 
 dataset = dset.ImageFolder(root=data_root,
@@ -42,6 +46,66 @@ dataset = dset.ImageFolder(root=data_root,
                                transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                            ]))
 data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=workers)
+
+
+class Generator(nn.Module):
+    def __init__(self, ngpu):
+        super(Generator, self).__init__()
+        self.ngpu = ngpu
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 4 x 4
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose2d( ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.ReLU(True),
+            # state size. (ngf) x 32 x 32
+            nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. (nc) x 64 x 64
+        )
+
+    def forward(self, input):
+        return self.main(input)
+
+
+class Discriminator(nn.Module):
+    def __init__(self, ngpu):
+        super(Discriminator, self).__init__()
+        self.ngpu = ngpu
+        self.main = nn.Sequential(
+            # input is (nc) x 64 x 64
+            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*8) x 4 x 4
+            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input):
+        return self.main(input)
 
 
 # custom weights initialization called on netG and netD
@@ -67,3 +131,31 @@ if __name__ == "__main__":
     plt.title("Training Images")
     plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=2, normalize=True).cpu(),(1,2,0)))
     plt.show()
+
+    # Create the generator
+    netG = Generator(ngpu).to(device)
+    # Create the Discriminator
+    netD = Discriminator(ngpu).to(device)
+
+    # Handle multi-gpu if desired
+    if (device.type == 'cuda') and (ngpu > 1):
+        netG = nn.DataParallel(netG, list(range(ngpu)))
+        netD = nn.DataParallel(netD, list(range(ngpu)))
+
+    # Apply the weights_init function to randomly initialize all weights
+    #  to mean=0, stdev=0.2.
+    netG.apply(weights_init)
+    netD.apply(weights_init)
+
+    # Print the model
+    print(netG)
+    print(netD)
+
+    # Create batch of latent vectors that we will use to visualize the progression of the generator
+    fixed_noise = torch.randn(64, nz, 1, 1, device=device)
+
+    criterion = nn.BCELoss()
+
+    # Setup Adam optimizers for both G and D
+    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
