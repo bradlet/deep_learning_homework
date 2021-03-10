@@ -134,10 +134,6 @@ if __name__ == "__main__":
     netG.apply(weights_init)
     netD.apply(weights_init)
 
-    # Print the model
-    print(netG)
-    print(netD)
-
     # Create batch of latent vectors that we will use to visualize the progression of the generator
     fixed_noise = torch.randn(64, nz, 1, 1, device=device)
 
@@ -231,7 +227,7 @@ if __name__ == "__main__":
             iters += 1
 
     time_to_fit = time() - start_time  # Training time elapsed in seconds
-    print(f"Training Complete! ${time_to_fit * 60} minutes elapsed.")
+    print(f"Training Complete! {time_to_fit / 60} minutes elapsed.")
 
     plt.figure(figsize=(10, 5))
     plt.title("Generator and Discriminator Loss During Training")
